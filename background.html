@@ -1,0 +1,78 @@
+<html>
+<head>
+<script>
+  function getOptionsObject(optName) {
+    var thing = localStorage[optName];
+    if(typeof thing != "string") {
+        // Initialize storage
+        localStorage[optName] = JSON.stringify({});
+        return {};
+    }
+    var parsed = JSON.parse(thing);
+    return parsed;
+  }
+
+  // JSONifies and saves an associative array object in localStorage
+  function saveOptionsObject(optName, data) {
+    localStorage[optName] = JSON.stringify(data);
+  }
+
+  // Returns true if the specified option is defined in localStorage
+  function optionExists(opt) {
+    return (typeof localStorage[opt] != "undefined");
+  }
+
+  // Checks whether the option exists in localStorage, and if it doesn't, set it to
+  // the specified value
+  function defaultOptionValue(opt, val) {
+    if(!optionExists(opt)){
+        localStorage[opt] = JSON.stringify(val);
+        console.log(localStorage[opt]);
+    }
+  }
+
+  // Sets options to defaults, upgrading old options from previous versions as necessary
+  function setDefaultOptions() {
+    defaultOptionValue("shouldLaunchWebIME", true);
+  }
+
+  // Upgrade options before we do anything else.
+  setDefaultOptions(); 
+
+  function applyWebIMESetting(){
+  	if(getOptionsObject("shouldLaunchWebIME")){
+  		chrome.browserAction.setIcon({path:"assets/images/ime_on.png"});
+  	} else {
+		chrome.browserAction.setIcon({path:"assets/images/ime_off.png"});
+  	}
+  }
+
+  function toggleWebIME() {
+  	if(getOptionsObject("shouldLaunchWebIME")){
+  		saveOptionsObject("shouldLaunchWebIME", false);
+  		chrome.browserAction.setIcon({path:"assets/images/ime_off.png"});
+  	} else {
+  		saveOptionsObject("shouldLaunchWebIME", true);
+  		chrome.browserAction.setIcon({path:"assets/images/ime_on.png"});
+  	}
+  	chrome.tabs.getSelected(null, function(tab) {
+  		chrome.tabs.sendRequest(tab.id, {greeting: "toggleWebIME"}, function(response) {
+    	console.log(response.ok);
+  	  });
+	});
+  }
+
+  chrome.browserAction.onClicked.addListener(toggleWebIME);
+  applyWebIMESetting();
+  
+  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
+    if (request.greeting == "prefs")
+      sendResponse({shouldLaunchWebIME: getOptionsObject("shouldLaunchWebIME")});
+    else
+      sendResponse({}); // snub them.
+  });
+</script>
+</head>
+<body>
+</body>
+</html>
